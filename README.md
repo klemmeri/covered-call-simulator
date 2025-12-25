@@ -86,13 +86,10 @@ Click the green **Code** button → **Download ZIP** → unzip the folder.
 
 You should see the following files in the unzipped folder:
 
-...
-
 covered_call_simulator.py
 requirements.txt
 README.md
 
-...
 
 ### 2) Install required Python packages
 
@@ -107,9 +104,7 @@ Then run:
 
 ```bash
 pip install -r requirements.txt
-```
 
----
 
 ### 3) Run the simulator
 
@@ -118,7 +113,6 @@ In the same terminal window, run:
 ```bash
 python covered_call_simulator.py
 
-...
 You will be prompted to:
 
 Select a market regime
@@ -128,13 +122,8 @@ Enter starting cash
 Choose default delta and DTE for new calls
 
 A plot will appear, and the program will pause for your input each day
-...
 
----
 When the simulation ends, the program creates an **`output` folder in the same directory as the script** and writes one Excel workbook there:  ./output/CC_Simulation_Output.xlsx
-
-...
-
 
 Nothing is written anywhere else on your system.
 
@@ -142,13 +131,11 @@ The workbook contains three sheets:
 - **EquityCurve** — strategy vs buy-and-hold equity over time
 - **TradeLog** — all option trades
 - **DecisionLog** — every daily decision you made
-...
 
----
 
 ## Disclaimer
 
 This simulator is for educational purposes only.  
 It is not investment advice.  
 Synthetic prices are generated from stochastic processes and do not represent real market behavior.
-...
+
