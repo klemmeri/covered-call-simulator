@@ -67,11 +67,11 @@ Each run is:
 
 Market regimes are implemented by changing the **statistical environment** of the random price generator:
 
-- Drift (long-term bias)
-- Volatility level and clustering
-- Mean reversion (for choppy regimes)
+- **Drift** (long-term directional bias)
+- **Volatility level and clustering**
+- **Mean reversion** (for choppy regimes)
 
-The simulator does *not* script outcomes.  
+The simulator does **not** script outcomes.  
 It simply changes the probabilities under which randomness plays out.
 
 Even within the same regime, different runs can produce very different results.
@@ -84,4 +84,31 @@ Even within the same regime, different runs can produce very different results.
 
 Click the green **Code** button → **Download ZIP** → unzip the folder.
 
-You should see:
+You should see the following files in the unzipped folder:
+
+covered_call_simulator.py
+requirements.txt
+README.md
+
+
+---
+
+### 2) Install required Python packages
+
+Open a terminal (or Anaconda Prompt) in the unzipped folder and run:
+
+```bash
+pip install -r requirements.txt
+
+
+---
+
+### 2) Install required Python packages
+
+Open a terminal (or Anaconda Prompt) in the unzipped folder and run:
+
+```bash
+pip install -r requirements.txt
+
+./output/CC_Simulation_Output.xlsx
+
