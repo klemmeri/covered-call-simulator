@@ -112,6 +112,9 @@ In the same terminal window, run:
 ```bash
 python covered_call_simulator.py
 
+That's it
+---
+
 You will be prompted to:
 
 Select a market regime
