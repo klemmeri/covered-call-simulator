@@ -43,6 +43,8 @@ to let you *experience* how covered calls behave, one decision at a time.
   - Unrealized P/L
   - Cash
   - Days to expiration
+ 
+When rolling, the simulator opens a new short call with a user-specified delta and days-to-expiration; how far “out” the roll goes is determined entirely by those inputs.
 
 The simulator pauses after each plot and waits for **your decision** before moving on.
 
