@@ -102,7 +102,6 @@ On Windows, the easiest way is:
 
 Then run:
 
-```bash
 pip install -r requirements.txt
 
 
