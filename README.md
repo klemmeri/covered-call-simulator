@@ -109,11 +109,8 @@ pip install -r requirements.txt
 
 In the same terminal window, run:
 
-```bash
-python covered_call_simulator.py
 
-That's it
----
+python covered_call_simulator.py
 
 You will be prompted to:
 
