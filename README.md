@@ -8,3 +8,4 @@ When the simulator finishes, it creates an `output` folder **in the same directo
 
 Nothing is written elsewhere on your system.  
 If you move the script to a different folder, the output will appear there instead.
+Note: The output file is saved in an 'output' folder next to this script.
