@@ -138,3 +138,11 @@ This simulator is for educational purposes only.
 It is not investment advice.  
 Synthetic prices are generated from stochastic processes and do not represent real market behavior.
 
+---
+
+## About the author
+
+This simulator accompanies a Substack newsletter exploring options strategies, risk, and market structure — with an emphasis on understanding *why* popular strategies behave the way they do.
+
+You can find related articles and discussion here:  
+👉 https://ctranch.substack.com
