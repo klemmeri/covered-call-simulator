@@ -308,6 +308,8 @@ def open_new_call(
     T = max(expiry_idx - idx, 1) / 252.0
 
     K = strike_for_target_delta(S, target_delta, T, cfg.r, iv)
+    K = round(K)  # SPY trades in $1 strike increments
+
     premium_per_share = bs_call_price(S, K, T, cfg.r, iv)
     premium = premium_per_share * cfg.shares
 
@@ -498,7 +500,7 @@ class PersistentPlotter:
             transform=self.ax_price.transAxes,
             ha="left",
             va="top",
-            fontsize=9,
+            fontsize=10,
             bbox=dict(boxstyle="round,pad=0.4", facecolor="white", edgecolor="black", alpha=0.95),
             clip_on=False,
         )
