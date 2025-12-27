@@ -10,6 +10,9 @@ Robust fixes included:
 - Strike line is red dashed
 - Dot markers for latest underlying price and latest CC total equity
 - Handles xmin==xmax on first bar to avoid identical xlim warnings
+- SPY-style $1 strike increments (strike rounded to integer)
+- Strike display is ALWAYS integer dollars (no cents) in box, console, and logs
+- Quit works immediately; figure closes cleanly (no blocking plt.show())
 
 Dependencies:
   numpy, pandas, matplotlib, scipy, openpyxl
@@ -307,8 +310,9 @@ def open_new_call(
     expiry_idx = min(idx + dte_days, len(df) - 1)
     T = max(expiry_idx - idx, 1) / 252.0
 
+    # Find strike from delta, then snap to SPY-style $1 increments
     K = strike_for_target_delta(S, target_delta, T, cfg.r, iv)
-    K = round(K)  # SPY trades in $1 strike increments
+    K = float(round(K))  # ensure integer-dollar strikes
 
     premium_per_share = bs_call_price(S, K, T, cfg.r, iv)
     premium = premium_per_share * cfg.shares
@@ -322,7 +326,7 @@ def open_new_call(
         trades,
         df.loc[idx, "date"],
         "SELL_CALL",
-        f"K={K:,.2f}, DTE={expiry_idx - idx}, targetΔ={target_delta:.2f}, prem={money2(premium)} {note}".strip(),
+        f"K={money0(K)}, DTE={expiry_idx - idx}, targetΔ={target_delta:.2f}, prem={money2(premium)} {note}".strip(),
         cash_delta=premium - cfg.commission_option,
         cash_after=state.cash,
     )
@@ -341,7 +345,7 @@ def close_call(df: pd.DataFrame, idx: int, state: State, cfg: StrategyConfig, tr
         trades,
         df.loc[idx, "date"],
         "BUY_TO_CLOSE",
-        f"K={state.short_call.K:,.2f}, cost={money2(call_price)} {reason}".strip(),
+        f"K={money0(state.short_call.K)}, cost={money2(call_price)} {reason}".strip(),
         cash_delta=-(call_price + cfg.commission_option),
         cash_after=state.cash,
     )
@@ -365,7 +369,7 @@ def maybe_handle_expiry_assignment(df: pd.DataFrame, idx: int, state: State, cfg
             trades,
             df.loc[idx, "date"],
             "ASSIGNED",
-            f"Shares called away at K={call.K:,.2f}, proceeds={money2(proceeds)}",
+            f"Shares called away at K={money0(call.K)}, proceeds={money2(proceeds)}",
             cash_delta=proceeds - cfg.commission_stock,
             cash_after=state.cash,
         )
@@ -380,7 +384,7 @@ def maybe_handle_expiry_assignment(df: pd.DataFrame, idx: int, state: State, cfg
             trades,
             df.loc[idx, "date"],
             "EXPIRE",
-            f"Call expired worthless (K={call.K:,.2f})",
+            f"Call expired worthless (K={money0(call.K)})",
             cash_delta=0.0,
             cash_after=state.cash,
         )
@@ -481,7 +485,6 @@ class PersistentPlotter:
         self.ax_eq.set_ylabel("Equity ($)")
         self.ax_eq.set_xlabel("Date")
 
-        # ---- X ticks: readable, non-compressing ----
         # Show x labels ONLY on bottom subplot to avoid crowding
         self.ax_price.tick_params(axis="x", which="both", labelbottom=False)
 
@@ -491,7 +494,7 @@ class PersistentPlotter:
         self.ax_eq.xaxis.set_major_formatter(self.formatter)
 
         # Info box anchored just outside the top axes (right side)
-        BOX_X = 1.15  # increase (e.g., 1.10) to push further right
+        BOX_X = 1.25  # increase to push further right
         BOX_Y = 0.86
         self.info_text = self.ax_price.text(
             BOX_X,
@@ -571,7 +574,7 @@ class PersistentPlotter:
 
     def close(self):
         plt.ioff()
-        plt.close(self.fig)  # close the figure immediately (no blocking show())
+        plt.close(self.fig)
 
 
 # ============================================================
@@ -682,12 +685,13 @@ def run_interactive(
             f"Cash={money0(state.cash)} | DTE_left={dte_left}"
         )
 
-        info_lines = [f"Regime: {regime_name}", f"S: {money2(S)}"]
+        info_lines = [f"Regime: {regime_name}", f"SPY: {money2(S)}"]
+
         if state.short_call:
             info_lines += [
                 f"DTE_left: {dte_left}",
                 f"Δ now: {delta_now:.2f}",
-                f"Strike: {money2(state.short_call.K)}",
+                f"Strike: {money0(state.short_call.K)}",  # ALWAYS integer display
                 f"Δ target: {delta_target:.2f}",
                 f"DTE(opened): {int(dte_opened)}",
             ]
@@ -712,11 +716,12 @@ def run_interactive(
         # Console status + decision prompt
         if state.short_call:
             print(
-                f"{equity_df.loc[idx, 'Date'].date()}  S={money2(S)}  IV={equity_df.loc[idx, 'IV']:.2f}  "
+                f"{equity_df.loc[idx, 'Date'].date()}  SPY={money2(S)}  IV={equity_df.loc[idx, 'IV']:.2f}  "
                 f"Cash={money0(state.cash)}  TotalEq={money0(eq_val)} |  "
-                f"ShortCall K={money2(state.short_call.K)}  DaysToExp={dte_left}  "
+                f"ShortCall K={money0(state.short_call.K)}  DaysToExp={dte_left}  "
                 f"Δ={float(delta_now):.2f}  Liab={money0(liab)}"
             )
+
             prompt = "[K]eep  [C]lose  [R]oll(fast)  [RR]oll+Change  [Q]uit -> "
         else:
             print(
@@ -862,6 +867,9 @@ if __name__ == "__main__":
 
     print("\nSaved workbook:")
     print(OUTPUT_XLSX)
+    print("\nSheets: EquityCurve, TradeLog, DecisionLog")
+    print("\nDone.")
+
     print("\nSheets: EquityCurve, TradeLog, DecisionLog")
     print("\nDone.")
 
