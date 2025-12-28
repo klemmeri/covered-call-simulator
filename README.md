@@ -84,7 +84,8 @@ Even within the same regime, different runs can produce very different results.
 
 ### 1) Download the code
 
-Click the green **Code** button → **Download ZIP** → unzip the folder.
+Click the Release **Code** button → **Download ZIP** → unzip the folder.
+
 
 You should see the following files in the unzipped folder:
 
