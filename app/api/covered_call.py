@@ -7,12 +7,13 @@ router = APIRouter(prefix="/covered-call", tags=["covered-call"])
 
 
 class StrikeRequest(BaseModel):
-    spot: float
-    dte_days: float
-    iv: float
-    target_delta: float
-    r: float = 0.05
-    q: float = 0.0
+    spot: float = Field(100, description="SPY spot price")
+    dte_days: int = Field(30, description="Days to expiration")
+    iv: float = Field(0.25, description="Implied volatility")
+    target_delta: float = Field(0.30, description="Target call delta (0.01 to 0.99)")
+    r: float = Field(0.05, description="Risk-free rate")
+    q: float = Field(0.0, description="Dividend yield")
+
 
 class StrikeLadderRequest(BaseModel):
     spot: float = Field(100, description="SPY spot price")
