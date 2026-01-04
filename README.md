@@ -48,4 +48,16 @@ uvicorn main:app --reload
 
 Tip: Always copy the entire response JSON from the prior step and paste it as the next step’s "state".
 
+# Covered Call Web Simulator — Backend
 
+Deterministic strike selection endpoints for a covered-call simulator.
+
+## Assumptions (current)
+- Symbol is fixed to **SPY** (only ETF supported in this simulation).
+- Strike grid is **$1 increments** (integer strikes).
+- User selects the **starting spot price**.
+
+## Run locally
+```bash
+.\.venv\Scripts\Activate
+uvicorn main:app --reload
