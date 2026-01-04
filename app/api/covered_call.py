@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from app.api.sim_state import AdvanceDayRequest, AdvanceDayResponse
 from app.api.sim_state import RebuySharesRequest, RebuySharesResponse
+from app.api.sim_state import SellCallRequest, SellCallResponse, ShortCall
 
 
 
@@ -226,4 +227,43 @@ def rebuy_shares(state: SimState, req: RebuySharesRequest) -> RebuySharesRespons
 
     return RebuySharesResponse(**state.model_dump())
 
+@router.post("/sell-call", response_model=SellCallResponse)
+def sell_call(state: SimState, req: SellCallRequest) -> SellCallResponse:
+    if state.shares != 100:
+        raise HTTPException(status_code=400, detail="Must own 100 shares to sell a covered call")
+
+    if state.short_call is not None:
+        raise HTTPException(status_code=400, detail="Short call already open")
+
+    if req.dte_days <= 0:
+        raise HTTPException(status_code=400, detail="dte_days must be > 0")
+
+    # Round strike to nearest $1 (SPY convention)
+    strike_int = int(round(req.strike))
+
+    # Credit premium (per share × 100 shares)
+    state.cash += float(req.credit_per_share) * 100.0
+
+    state.short_call = ShortCall(
+        strike=float(strike_int),
+        dte_days=int(req.dte_days),
+        delta_target=float(req.delta_target),
+        credit_per_share=float(req.credit_per_share),
+        opened_day=int(state.day),
+    )
+
+    state.events.append(
+        Event(
+            day=state.day,
+            type="SELL_CALL",
+            details={
+                "strike": strike_int,
+                "dte_days": int(req.dte_days),
+                "delta_target": float(req.delta_target),
+                "credit_per_share": float(req.credit_per_share),
+            },
+        )
+    )
+
+    return SellCallResponse(**state.model_dump())
 

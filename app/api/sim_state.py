@@ -60,3 +60,13 @@ class RebuySharesRequest(BaseModel):
 
 class RebuySharesResponse(SimState):
     pass
+
+class SellCallRequest(BaseModel):
+    strike: float = Field(..., description="Call strike (SPY uses $1 increments)")
+    dte_days: int = Field(..., description="Days to expiration for the short call")
+    delta_target: float = Field(0.30, description="Target delta used to select strike (optional)")
+    credit_per_share: float = Field(..., description="Premium received per share")
+
+
+class SellCallResponse(SimState):
+    pass
