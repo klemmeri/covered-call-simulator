@@ -1,10 +1,15 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from app.core.bs import covered_call_strike_for_delta
+from app.api.sim_state import InitializeRequest, InitializeResponse, SimState, Event  # keep if used elsewhere
 
 router = APIRouter(prefix="/covered-call", tags=["covered-call"])
 
+
+# ----------------------------
+# Models
+# ----------------------------
 
 class StrikeRequest(BaseModel):
     spot: float = Field(100, description="SPY spot price")
@@ -20,11 +25,15 @@ class StrikeLadderRequest(BaseModel):
     dte_days: int = Field(30, description="Days to expiration")
     iv: float = Field(0.25, description="Implied volatility")
     target_deltas: list[float] = Field(
-        [0.15, 0.20, 0.25, 0.30],
-        description="Target call deltas"
+        default_factory=lambda: [0.15, 0.20, 0.25, 0.30],
+        description="Target call deltas",
     )
     r: float = Field(0.05, description="Risk-free rate")
     q: float = Field(0.0, description="Dividend yield")
+
+
+class StrikeResponse(BaseModel):
+    strike: float
 
 
 class StrikeLadderResponse(BaseModel):
@@ -33,12 +42,9 @@ class StrikeLadderResponse(BaseModel):
     strikes: dict[float, int]
 
 
-
-class StrikeResponse(BaseModel):
-    strike: float
-
-
-from fastapi import HTTPException
+# ----------------------------
+# Endpoints
+# ----------------------------
 
 @router.post("/strike-for-delta", response_model=StrikeResponse)
 def strike_for_delta(req: StrikeRequest) -> StrikeResponse:
@@ -68,7 +74,9 @@ def strike_for_delta(req: StrikeRequest) -> StrikeResponse:
         q=req.q,
     )
 
-    return StrikeResponse(strike=k)
+    return StrikeResponse(strike=int(round(k)))
+
+
 
 @router.post("/strike-ladder", response_model=StrikeLadderResponse)
 def strike_ladder(req: StrikeLadderRequest) -> StrikeLadderResponse:
@@ -103,13 +111,11 @@ def strike_ladder(req: StrikeLadderRequest) -> StrikeLadderResponse:
             q=req.q,
         )
 
-        # ---- ROUND TO NEAREST INTEGER STRIKE ----
+        # ---- ROUND TO NEAREST $1 STRIKE (SPY convention) ----
         strikes[d] = int(round(k))
 
     return StrikeLadderResponse(
-    symbol="SPY",
-    strike_increment=1,
-    strikes=strikes,
-)
-
-
+        symbol="SPY",
+        strike_increment=1,
+        strikes=strikes,
+    )
