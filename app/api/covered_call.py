@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.core.bs import covered_call_strike_for_delta
 
@@ -15,15 +15,20 @@ class StrikeRequest(BaseModel):
     q: float = 0.0
 
 class StrikeLadderRequest(BaseModel):
-    spot: float
-    dte_days: float
-    iv: float
-    target_deltas: list[float]
-    r: float = 0.05
-    q: float = 0.0
+    spot: float = Field(100, description="SPY spot price")
+    dte_days: int = Field(30, description="Days to expiration")
+    iv: float = Field(0.25, description="Implied volatility")
+    target_deltas: list[float] = Field(
+        [0.15, 0.20, 0.25, 0.30],
+        description="Target call deltas"
+    )
+    r: float = Field(0.05, description="Risk-free rate")
+    q: float = Field(0.0, description="Dividend yield")
 
 
 class StrikeLadderResponse(BaseModel):
+    symbol: str
+    strike_increment: int
     strikes: dict[float, int]
 
 
@@ -100,5 +105,10 @@ def strike_ladder(req: StrikeLadderRequest) -> StrikeLadderResponse:
         # ---- ROUND TO NEAREST INTEGER STRIKE ----
         strikes[d] = int(round(k))
 
-    return StrikeLadderResponse(strikes=strikes)
+    return StrikeLadderResponse(
+    symbol="SPY",
+    strike_increment=1,
+    strikes=strikes,
+)
+
 
