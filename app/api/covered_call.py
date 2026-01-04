@@ -1,5 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+from app.api.sim_state import AdvanceDayRequest, AdvanceDayResponse
+from app.api.sim_state import RebuySharesRequest, RebuySharesResponse
+
+
 
 from app.core.bs import covered_call_strike_for_delta
 from app.api.sim_state import InitializeRequest, InitializeResponse, SimState, Event  # keep if used elsewhere
@@ -119,3 +123,107 @@ def strike_ladder(req: StrikeLadderRequest) -> StrikeLadderResponse:
         strike_increment=1,
         strikes=strikes,
     )
+@router.post("/advance-day", response_model=AdvanceDayResponse)
+def advance_day(state: SimState, req: AdvanceDayRequest) -> AdvanceDayResponse:
+    # Update spot and day
+    state.day += 1
+    state.spot = req.spot
+
+    # If no short call, nothing to age/expire
+    if state.short_call is None:
+        state.events.append(Event(day=state.day, type="NO_ACTION", details={"spot": state.spot}))
+        return AdvanceDayResponse(**state.model_dump())
+
+    # Age the option by one day
+    state.short_call.dte_days -= 1
+
+    # If not expired yet, just record and return
+    if state.short_call.dte_days > 0:
+        state.events.append(
+            Event(
+                day=state.day,
+                type="NO_ACTION",
+                details={"spot": state.spot, "call_dte": state.short_call.dte_days},
+            )
+        )
+        return AdvanceDayResponse(**state.model_dump())
+
+    # Expiration day: decide assignment vs expire worthless
+    strike = state.short_call.strike
+
+    if state.spot >= strike:
+        # Assigned: shares called away, keep premium already in cash (handled when sold)
+        state.shares = 0
+        state.short_call = None
+        state.events.append(
+            Event(day=state.day, type="ASSIGNED", details={"spot": state.spot, "strike": strike})
+        )
+    else:
+        # Expires worthless
+        state.short_call = None
+        state.events.append(
+            Event(day=state.day, type="EXPIRE_CALL", details={"spot": state.spot, "strike": strike})
+        )
+
+    return AdvanceDayResponse(**state.model_dump())
+
+@router.post("/initialize", response_model=InitializeResponse)
+def initialize(req: InitializeRequest) -> InitializeResponse:
+    state = SimState(
+        spot=req.spot,
+        day=0,
+        shares=100,
+        cash=req.start_cash - 100.0 * req.spot,
+        short_call=None,
+        events=[Event(day=0, type="BUY_SHARES", details={"shares": 100, "price": req.spot})],
+    )
+    return InitializeResponse(**state.model_dump())
+
+@router.post("/apply-event", response_model=SimState)
+def apply_event(state: SimState, event: Event) -> SimState:
+    # advance day if needed
+    state.day = event.day
+
+    if event.type == "SELL_CALL":
+        state.short_call = event.details
+
+    if event.type == "BUY_SHARES":
+        state.shares += event.details["shares"]
+        state.cash -= event.details["shares"] * event.details["price"]
+
+    if event.type == "SELL_CALL":
+        # credit premium: per-share × 100 shares
+        credit = event.details["credit_per_share"] * state.shares
+        state.cash += credit
+
+        state.short_call = {
+         "strike": event.details["strike"],
+         "dte_days": event.details["dte_days"],
+         "delta_target": event.details.get("delta_target"),
+         "credit_per_share": event.details["credit_per_share"],
+         "opened_day": event.day,
+    }
+    
+
+    state.events.append(event)
+    return state
+
+@router.post("/rebuy-shares", response_model=RebuySharesResponse)
+def rebuy_shares(state: SimState, req: RebuySharesRequest) -> RebuySharesResponse:
+    if state.shares != 0:
+        raise HTTPException(status_code=400, detail="Shares already owned (shares must be 0 to rebuy)")
+
+    cost = 100.0 * req.price
+    if state.cash < cost:
+        raise HTTPException(status_code=400, detail="Insufficient cash to rebuy 100 shares")
+
+    state.shares = 100
+    state.cash -= cost
+
+    state.events.append(
+        Event(day=state.day, type="BUYBACK_SHARES", details={"shares": 100, "price": req.price})
+    )
+
+    return RebuySharesResponse(**state.model_dump())
+
+
